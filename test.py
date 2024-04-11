@@ -1,78 +1,80 @@
 import dash
 from dash import dcc, html, Input, Output
 import plotly.graph_objects as go
-import numpy as np
+import pandas as pd
+import os
 from PIL import Image
+import io
+import base64
 
-# Assuming images are stored in 'assets/backgrounds/' with predefined options
-background_images = {
-    'Background 1': 'assets/backgroundimage/09012023-DAPI.jpg',
-    'Background 2': 'assets/backgroundimage/08102023-MIN_Matrix.jpg',
-    # Add more backgrounds as needed
-}
+# Directory where datasets are stored
+datasets_dir = './assets'
 
-# Sample data for each background
-scatter_data_options = {
-    'Background 1': {
-        'x': np.random.randn(50),
-        'y': np.random.randn(50) + 2,  # Some random data
-        'mode': 'markers',
-        'marker': {'size': 12, 'color': 'LightSkyBlue'}
-    },
-    'Background 2': {
-        'x': np.random.randn(50) + 1,
-        'y': np.random.randn(50) + 3,  # Different random data
-        'mode': 'markers',
-        'marker': {'size': 12, 'color': 'Violet'}
-    },
-    # Add more data sets as needed
-}
+# Automatically list available datasets based on folder names
+available_datasets = [name for name in os.listdir(datasets_dir) if os.path.isdir(os.path.join(datasets_dir, name))]
 
 app = dash.Dash(__name__)
 
 app.layout = html.Div([
     dcc.Dropdown(
-        id='background-selector',
-        options=[{'label': k, 'value': k} for k in background_images.keys()],
-        value='Background 1'  # Default value
+        id='dataset-selector',
+        options=[{'label': dataset, 'value': dataset} for dataset in available_datasets],
+        value=available_datasets[0] if available_datasets else None  # Default to first dataset or None
     ),
-    dcc.Graph(id='scatter-plot',style={'height': '90vh', 'width': '90vw'} )
+    dcc.Graph(id='scatter-plot')
 ])
 
 @app.callback(
     Output('scatter-plot', 'figure'),
-    [Input('background-selector', 'value')]
+    [Input('dataset-selector', 'value')]
 )
-def update_plot(selected_background):
-    scatter_data = scatter_data_options[selected_background]
+def update_plot(selected_dataset):
+    if not selected_dataset:
+        return go.Figure()
 
-    # # Get the size of the selected background image
-    # with Image.open(background_images[selected_background]) as img:
-    #     width, height = img.size
-    #     aspect_ratio = width / height
+    # Construct paths to the dataset's CSV file and background image
+    csv_file_path = os.path.join(datasets_dir, selected_dataset, 'geneexpression.csv')
+    background_image_path = os.path.join(datasets_dir, selected_dataset, 'background.jpg')
     
-    # # Define the layout size based on the image size
-    # # Adjusting the layout size to maintain the aspect ratio of the background
-    # layout_width = 1000  # You can set this to your preferred width
-    # layout_height = layout_width / aspect_ratio
+    # Load scatter plot data from CSV
+    df = pd.read_csv(csv_file_path)
+    
+    hovertemplate = ''
+    for col in df.columns:
+        hovertemplate += f'<b>{col}</b>: %{{customdata[{df.columns.get_loc(col)}]}}<br>'
+
+
 
     # Create scatter plot
-    fig = go.Figure(data=[go.Scatter(x=scatter_data['x'], y=scatter_data['y'], mode=scatter_data['mode'], marker=scatter_data['marker'])])
+    fig = go.Figure(data=[go.Scatter(
+        x=df['cellx'], 
+        y=df['celly'], 
+        mode='markers',
+        marker=dict(size=5,color=df.get('color', 'blue')),  # Adjust the size to be smaller
+        customdata=df.values,
+        hovertemplate=hovertemplate
+    )])
 
-    # Update figure layout to include the background image and adjust size
+    # Convert the background image to base64
+    with Image.open(background_image_path) as img:
+        with io.BytesIO() as buffer:
+            img.save(buffer, format='JPEG')
+            encoded_image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    
+    # Update figure layout to include the background image
     fig.update_layout(
         images=[go.layout.Image(
-            source=background_images[selected_background],
-            xref="paper", yref="paper",
-            x=0, y=1,
-            sizex=1, sizey=1,
-            sizing="stretch",
+            source=f"data:image/jpeg;base64,{encoded_image}",
+            xref="x", yref="y",
+            x=0, y=0,
+            sizex=df['cellx'].max(),  # Set the image size in x-coordinate to span the x data range
+            sizey=df['celly'].max(),  # Set the image size in y-coordinate to span the y data range
+            sizing="stretch",  # Maintain the original size and aspect ratio
             opacity=0.5,
             layer="below")],
         xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=False),
-        autosize=True,
-        margin=dict(l=0, r=0, t=0, b=0),  # This removes the default margin to use the full area
+        yaxis=dict(showgrid=False,autorange='reversed'),
+        margin=dict(l=0, r=0, t=0, b=0),  # Remove margins to fill the plot area
     )
 
     return fig
