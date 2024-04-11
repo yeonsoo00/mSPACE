@@ -1,0 +1,20 @@
+[12:13:12] Info: Run Rcfe445caf
+[12:13:12] Info: (2023-11-16) Run Baysor v0.6.2
+[12:13:12] Info: Loading data...
+[12:13:13] Info: Loaded 480719 transcripts
+[12:13:17] Info: Loading segmentation mask...
+[12:13:19] Warning: Minimum transcript coordinates are < 1: (0, 0). Filling it with 0.
+└ Baysor.DataLoading C:\Users\whl19\.julia\packages\Baysor\rFTAp\src\data_loading\prior_segmentation.jl:30
+[12:13:19] Info: Done
+[12:13:19] Info: Estimating noise level
+[12:13:31] Info: Done
+[12:13:43] Info: Clustering molecules...
+[12:14:22] Info: Algorithm stopped after 446 iterations. Error: 0.00188. Converged: true.
+[12:14:22] Info: Done
+[12:14:22] Info: Initializing algorithm. Scale: 54.59244878496322, scale std: 25.99179031852017, initial #components: 320478, #molecules: 480719.
+[12:14:27] Info: Using the following additional information about molecules: [:confidence, :cluster, :prior_segmentation]
+[12:14:27] Info: Using 2D coordinates
+[12:17:36] Info: Processing complete.
+[12:17:37] Info: Estimating local colors
+[12:19:14] Info: Saving results to segmentation.csv
+[12:19:19] Info: All done!
