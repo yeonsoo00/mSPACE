@@ -31,7 +31,6 @@ app.layout = html.Div([
 def update_plot(selected_dataset):
     if not selected_dataset:
         return go.Figure()
-
     # Construct paths to the dataset's CSV file and background image
     csv_file_path = os.path.join(datasets_dir, selected_dataset, 'geneexpression.csv')
     background_image_path = os.path.join(datasets_dir, selected_dataset, 'background.jpg')
