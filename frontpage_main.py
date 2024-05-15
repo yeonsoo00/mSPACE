@@ -31,7 +31,7 @@ app.layout = html.Div([
         ),
     ], style={'display': 'flex', 'justify-content': 'space-between'}),
     dcc.Graph(id='scatter-plot', style={'margin-top': '20px'}),
-    html.Img(src='./assets/images_dir/banner_footer.png', style={'width': '20%', 'height': 'auto', 'float': 'right'})
+    html.Img(src='./assets/images_dir/banner_footer.png', style={'width': '20%', 'height': 'auto', 'float': 'right', 'margin-top': '5px'})
 ], style={'margin': '10px'})
 
 @app.callback(
