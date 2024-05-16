@@ -8,7 +8,7 @@ import io
 import base64
 
 # Directory where datasets are stored
-datasets_dir = '/home/yec23006/projects/research/app/mSpace/assets' #'./assets'
+datasets_dir = './assets'
 
 # Automatically list available datasets based on folder names
 available_datasets = [name for name in os.listdir(datasets_dir) if os.path.isdir(os.path.join(datasets_dir, name))]
