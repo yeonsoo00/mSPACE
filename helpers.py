@@ -45,6 +45,7 @@ def update_plot(selected_dataset):
 
 
     # Create scatter plot
+    # when ligand and receptor are chosen, refresh the plot with links
     fig = go.Figure(data=[go.Scatter(
         x=df['cellx'], 
         y=df['celly'], 
