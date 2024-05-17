@@ -5,16 +5,16 @@ import plotly.express as px
 import pandas as pd
 import os
 from flask import Flask
-from helpers import update_plot  # Ensure this returns a proper Plotly figure
+from helpers import *
 
 # Setup your server and app
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)
 
 # Load data from CSV
-df = pd.read_csv('./assets/data_09012023/geneexpression.csv')
-column_options = [{'label': col, 'value': col} for col in df.columns[3:]]
-row_options = [{'label': str(index), 'value': str(index)} for index in df.index]  # Assuming row index as identifier
+df = pd.read_csv('./CLARA/Dataset/Testdata/Mapped_new/csv/Mapped_new_0.08_CommunicationWithAxis_Y_details.csv')
+column_options = [{'label': ligand, 'value': ligand} for ligand in df['Ligand']]
+row_options = [{'label': receptor, 'value': receptor} for receptor in df['Receptor']]
 
 # Define your layout
 app.layout = html.Div([
@@ -29,7 +29,7 @@ app.layout = html.Div([
     html.Div([
         html.Label(' Select Ligand and Receptor:', style={'margin-right': '10px', 'align-self': 'center', 'font-size': '16px'}),
         dcc.Dropdown(
-            id='Ligent-dropdown',
+            id='Ligand-dropdown',
             options=column_options,
             placeholder='Select Column',
             style={'width': '40%', 'display': 'inline-block', 'margin-right': '0', 'align-self': 'center'}
@@ -42,24 +42,32 @@ app.layout = html.Div([
         )
     ],  style={'display': 'flex', 'justify-content': 'flex-start', 'align-items': 'center', 'margin-top': '20px', 'margin-bottom': '20px'}),
     html.Div(id='update-info', style={'display': 'none'}),
+    html.Div(id='message-display', style={'margin-top': '20px', 'color': 'red', 'font-weight': 'bold'}),
     html.Div(id='button-container', style={'margin-top': '50px'}),
     html.Div(style={'position': 'absolute', 'bottom': '10px', 'right': '10px', 'width': '200px'},
         children=[html.Img(src='./assets/images_dir/banner_footer.png', style={'width': '100%', 'height': 'auto'})]
     )
 ])
-
 @app.callback(
-    [Output('scatter-plot', 'figure'),  
-     Output('update-info', 'children')],
-    [Input('dataset-selector', 'value')]
+    [Output('scatter-plot', 'figure'),
+    Output('message-display', 'children')],
+    [Input('dataset-selector', 'value'),
+     Input('Ligand-dropdown', 'value'),
+     Input('Receptor-dropdown', 'value')]
 )
-def update_figure(selected_data):
-    if selected_data:
-        fig = update_plot(selected_data)  # Ensure this returns a plotly figure
-        return fig, "Subplots options" 
-    return {}, "No data selected. Please select dataset."
+def update_output(selected_dataset, ligand, receptor):
+    # Check if Ligand and Receptor are selected to refine the plot
+    if ligand and receptor:
+        fig, message = update_plot_colors(selected_dataset, ligand, receptor)
+        if message == "No pair matches":
+            return message
+        else:
+            return fig, message
+    elif selected_dataset:
+        # Update with initial dataset selection
+        return update_plot(selected_dataset)
+    return go.Figure()
 
-# Call back for ligand and receptor
 
 @app.callback(
     Output('button-container', 'children'),
