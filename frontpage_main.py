@@ -7,6 +7,7 @@ import os
 from flask import Flask
 from helpers import *
 
+
 # Setup your server and app
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)
@@ -14,7 +15,7 @@ app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)
 # Load data from CSV
 df = pd.read_csv('./CLARA/Dataset/Testdata/Mapped_new/csv/Mapped_new_0.08_CommunicationWithAxis_Y_details.csv')
 column_options = [{'label': ligand, 'value': ligand} for ligand in df['Ligand'].unique()]
-row_options = [{'label': receptor, 'value': receptor} for receptor in df['Receptor'].unique()]
+# row_options = [{'label': receptor, 'value': receptor} for receptor in df['Receptor'].unique()]
 
 df_gene = pd.read_csv('./assets/data_09012023/geneexpression.csv')
 geneList = [{'label': gene, 'value': gene} for gene in df_gene.columns[3:]]
@@ -29,11 +30,13 @@ app.layout = html.Div([
         style={'display': 'inline-block', 'width': '80%', 'margin-top': '5px'}
     ),
     dcc.Graph(id='scatter-plot', style={'margin-top': '20px'}),
-    html.Label('Select Gene to mark:', style={'margin-right': '10px', 'align-self': 'center', 'font-size': '16px'}),
+    html.Div(id='message-display', style={'margin-top': '20px', 'color': 'red', 'font-size': '16px'}),
+    html.Label('Select Gene(s) to mark:', style={'margin-right': '10px', 'align-self': 'center', 'font-size': '16px'}),
     dcc.Dropdown(
         id='Gene-dropdown',
         options=geneList,
-        placeholder='Select Gene',
+        placeholder='Select Gene(s)',
+        multi=True,
         style={'width': '40%', 'display': 'inline-block', 'margin-top':'10px','margin-right': '0', 'align-self': 'center'}
     ),
     html.Div([
@@ -46,44 +49,56 @@ app.layout = html.Div([
         ),
         dcc.Dropdown(
             id='Receptor-dropdown',
-            options=row_options,
             placeholder='Select Receptor',
             style={'width': '35%', 'display': 'inline-block', 'margin-left': '0', 'align-self': 'center'}
         )
     ],  style={'display': 'flex', 'justify-content': 'flex-start', 'align-items': 'center', 'margin-top': '20px', 'margin-bottom': '20px'}),
-    html.Div(id='message-display', style={'margin-top': '20px', 'color': 'red', 'font-weight': 'bold'}),
     html.Div(id='update-info', style={'display': 'none'}),
     dcc.Graph(id='communicating-cells', style={'margin-top': '20px'}),
     html.Div(style={'bottom': '10px', 'right': '10px', 'width': '300px', 'margin-top':'10px'},
         children=[html.Img(src='./assets/images_dir/banner_footer.png', style={'width': '100%', 'height': 'auto'})]
     )
 ])
+
 @app.callback(
-    Output('scatter-plot', 'figure'),
+    [Output('scatter-plot', 'figure'),
+     Output('message-display', 'children'),
+     Output('Gene-dropdown', 'value')],
     [Input('dataset-selector', 'value'),
      Input('Gene-dropdown', 'value')]
 )
-def update_output(selected_dataset, gene):
-    if gene:
-        fig = update_plot_colors(selected_dataset, gene)
-        return fig
-    elif selected_dataset:
-        return update_plot(selected_dataset)
-    return go.Figure()
-
+def update_output(selected_dataset, genes):
+    if selected_dataset and genes:
+        fig = update_plot_colors(selected_dataset, genes)
+        return fig, "", dash.no_update
+    elif not selected_dataset and genes:
+        return go.Figure(), "Select dataset to plot", None
+    elif selected_dataset and not genes:
+        return update_plot(selected_dataset), "", dash.no_update
+    return go.Figure(), "", dash.no_update
 
 @app.callback(
-    [Output('communicating-cells', 'figure'),
-    Output('message-display', 'children')],
+    Output('Receptor-dropdown', 'options'),
+    [Input('Ligand-dropdown', 'value')]
+)
+def update_receptor_options(selected_ligand):
+    if selected_ligand:
+        filtered_df = df[df['Ligand'] == selected_ligand]
+        unique_receptors = filtered_df['Receptor'].unique()
+        return [{'label': receptor, 'value': receptor} for receptor in unique_receptors]
+    else:
+        return [{'label': receptor, 'value': receptor} for receptor in df['Receptor'].unique()]
+
+@app.callback(
+    Output('communicating-cells', 'figure'),
     [Input('Ligand-dropdown', 'value'), 
      Input('Receptor-dropdown', 'value')]
 )
 def update_network(ligand, receptor):
     if not ligand or not receptor:
-        return go.Figure(), "" 
-    fig, msg = update_network_graph(ligand, receptor)
-
-    return fig, msg
+        return go.Figure()
+    
+    return update_network_graph(ligand, receptor)
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=19530) # host = '0.0.0.0'

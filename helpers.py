@@ -82,7 +82,7 @@ def update_plot(selected_dataset):
     return fig
 
 
-def update_plot_colors(selected_dataset, gene):
+def update_plot_colors(selected_dataset, genes):
 
     # CSV file and background image
     csv_file_path = os.path.join(datasets_dir, selected_dataset, 'geneexpression.csv')
@@ -91,15 +91,18 @@ def update_plot_colors(selected_dataset, gene):
     # Load scatter plot data from CSV
     df = pd.read_csv(csv_file_path)
 
-    df_filtered = df[df[str(gene)] > 0]
-    cellid_list = df_filtered['cellid'].to_list()
-
-    default_color = df.get('color', 'blue') 
-    df['color'] = default_color  
-    df.loc[df['cellid'].isin(cellid_list), 'color'] = 'red' 
+    if genes:
+        # Filter the dataframe to include only cells that express all selected genes
+        mask = df[genes] > 0  # Boolean mask for cells where gene expression > 0
+        all_genes_expressed = mask.all(axis=1)  # Check if all conditions across selected genes are True for each cell
+        df['color'] = 'blue'  # Default color
+        df.loc[all_genes_expressed, 'color'] = 'red'  # Cells expressing all genes in red
+    else:
+        # If no genes are selected, default all to blue
+        df['color'] = 'blue'
 
     # Create hover template
-    hovertemplate = '<b>%{customdata}</b><br>' + '<br>'.join([f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(df.columns)])
+    hovertemplate = '<br>'.join([f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(df.columns)])
 
     # Create scatter plot
     fig = go.Figure(data=[go.Scatter(
@@ -110,6 +113,7 @@ def update_plot_colors(selected_dataset, gene):
         customdata=df.values,
         hovertemplate=hovertemplate
     )])
+
 
     # Convert the background image to base64
     with Image.open(background_image_path) as img:
@@ -143,8 +147,6 @@ def update_network_graph(ligand, receptor):
 
     # Filter data
     filtered_comm = df_comm[(df_comm['Ligand'] == ligand) & (df_comm['Receptor'] == receptor)]
-    if len(filtered_comm) == 0:
-        return go.Figure(), "No communicating cells"
 
     # Build the graph
     G = nx.DiGraph()
@@ -203,7 +205,7 @@ def update_network_graph(ligand, receptor):
         )
     )
 
-    return fig, ""
+    return fig
 
 def adjust_arrow_position(x0, y0, x1, y1, node_size):
     # Calculate direction of the edge
